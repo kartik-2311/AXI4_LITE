@@ -86,3 +86,25 @@ tests remain intact. P2 B-state retention and WSTRB behavior already pass and
 must be preserved. P4 acceptance-cycle enqueue is necessary for P1 payload
 integrity and is scheduled with Phase 2; AR enqueue accompanies Phase 3/P5.
 No register or state is required for payload capture: FIFO storage is reused.
+
+## Phase 1 failing traces on unchanged RTL
+
+Added procedural checker and transaction/register reference scoreboard because
+Icarus excludes the DUT SVA. Seed is fixed and printed: 0x41584934.
+`tb/run_hardening.ps1` runs 1:1, 1:3, 3:1 and 7:5 clock ratios (frequency).
+
+- MODE=1, changing payload immediately after acceptance: all four ratios fail
+  P4 capture. At 1:1, t=525000 ps: AW=1 EXEC=0 B=0, payload mismatch.
+- MODE=1 -HoldInputs isolates completion: 1:3 fails watchdog at t=599985000 ps,
+  AW=1 EXEC=1 B=0. Other three ratios pass this isolated write test. This
+  confirms the completion pulse can disappear at faster core clock rates.
+- MODE=2 -HoldInputs isolates read stalls: all four ratios fail P2. At 1:1,
+  t=705000 ps: AR=1 RE=1 R=0; RVALID disappears while RREADY remains low.
+- Legacy FIFO test compiles and exits zero but reports 44 mismatches, writes=44,
+  reads=0. Its read task samples after advancing the FWFT pointer, rather than
+  sampling the head at the pop edge. This does not prove a FIFO RTL defect;
+  the legacy test and FIFO remain unchanged.
+
+The new checks intentionally fail on the baseline. Later phase gates run
+the relevant new tests plus the unchanged legacy regression; already failing
+baseline tests are compared by their failures rather than treated as passes.
