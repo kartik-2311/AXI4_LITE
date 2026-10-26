@@ -132,7 +132,7 @@ module axi4lite_slave_top #(
     write_state_t write_state, write_state_next;
 
     // AWVALID and WVALID must both be high to accept transaction (v1)
-    assign wr_en = (write_state == PUSH_WAIT) && !wr_full;
+    assign wr_en = (write_state == IDLE) && AWVALID && WVALID && !wr_full;
     assign wr_data_in = {AWADDR, WDATA, WSTRB};
 
     // AWREADY and WREADY: both accepted when we can push
@@ -147,8 +147,9 @@ module axi4lite_slave_top #(
     // ----------------------------------------------------------------
     // Write-complete handshake from core side (synchronized)
     // ----------------------------------------------------------------
-    logic write_done_core;    // level in CORE_CLK domain when write data available
+    logic write_done_core;    // toggles only after core execution
     logic write_done_aclk;    // synchronized to ACLK domain
+    logic write_done_seen;    // B handshake acknowledges the completed toggle
 
     // 2-flop synchronizer for write_done_core -> ACLK
     sync_2ff #(
@@ -163,8 +164,10 @@ module axi4lite_slave_top #(
     always_ff @(posedge ACLK or negedge ARESETn) begin
         if (!ARESETn) begin
             write_state <= IDLE;
+            write_done_seen <= 1'b0;
         end else begin
             write_state <= write_state_next;
+            if (BVALID && BREADY) write_done_seen <= write_done_aclk;
         end
     end
 
@@ -177,12 +180,12 @@ module axi4lite_slave_top #(
                 end
             end
             PUSH_WAIT: begin
-                // After pushing, wait for core to receive
+                // Payload was enqueued at the IDLE handshake.
                 write_state_next = WAIT_CORE;
             end
             WAIT_CORE: begin
                 // Wait for core to complete write
-                if (write_done_aclk) begin
+                if (write_done_aclk != write_done_seen) begin
                     write_state_next = SEND_BRESP;
                 end
             end
@@ -263,11 +266,11 @@ module axi4lite_slave_top #(
     logic [AXI_DATA_WIDTH-1:0] rd_data_core;
     logic [1:0]               rd_resp_core;
 
-    // Write-complete signal to ACLK side (level when FIFO has data)
-    assign write_done_core = !wr_empty; // level: high when FIFO not empty
+    // P1/P3: one outstanding write reserves this persistent completion slot.
 
     always_ff @(posedge CORE_CLK or negedge CORE_RESETn) begin
         if (!CORE_RESETn) begin
+            write_done_core <= 1'b0;
             for (i = 0; i < NUM_REGS; i++) begin
                 reg_file[i] <= '0;
             end
@@ -279,6 +282,7 @@ module axi4lite_slave_top #(
                 // We'll use the lowest bits that can index NUM_REGS
                 localparam REG_IDX_WIDTH = $clog2(NUM_REGS);
                 logic [REG_IDX_WIDTH-1:0] reg_idx;
+                write_done_core <= ~write_done_core;
                 // Use bits [2+:REG_IDX_WIDTH] of address (assuming byte address, word-aligned)
                 reg_idx = wr_addr_core[2 +: REG_IDX_WIDTH];
                 // Write with strobe

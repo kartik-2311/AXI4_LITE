@@ -108,3 +108,10 @@ Icarus excludes the DUT SVA. Seed is fixed and printed: 0x41584934.
 The new checks intentionally fail on the baseline. Later phase gates run
 the relevant new tests plus the unchanged legacy regression; already failing
 baseline tests are compared by their failures rather than treated as passes.
+
+## Phase 2 gate
+
+MODE=1 without HOLD passes 4/4 ratios, including the previously lost
+completion at 1:3. The unchanged legacy top still times out at Test 4 and
+the standalone FIFO still reports exactly 44 mismatches. No baseline result
+became worse. Read failures remain scheduled for Phase 3.
