@@ -26,3 +26,14 @@ No raw multibit completion bus crosses domains.
 P1/P4 requires enqueueing payload on the joint AW/W handshake itself. The
 existing request FIFO supplies the storage; no address/data holding register
 is needed. Existing SEND_BRESP already provides P2 BVALID retention.
+
+## Read storage and arbitration
+
+The existing FWFT response FIFO is the P2 holding storage. RVALID is not-empty;
+the head is popped only at RVALID && RREADY. The existing read FSM admits one
+AR until its R handshake. AR enqueue happens on acceptance, reusing the FIFO.
+Core read requests pop only when actually selected by arbitration. A read
+requires response FIFO space and no previously registered response enqueue
+pending; the existing rd_data_core/rd_resp_core pipeline is retained. This
+conservatively reserves a response slot and avoids both discarded requests
+under write priority and overflow from the one-cycle enqueue latency.

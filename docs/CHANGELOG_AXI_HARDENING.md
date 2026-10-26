@@ -23,3 +23,13 @@ fixed seed, four clock ratios and bounded legacy runner. No RTL edits.
   clocks. Correctly accepted data is used even if the bus changes afterward.
 - Validation: MODE=1 passes all four ratios; unchanged legacy top still times
   out at Test 4; unchanged FIFO test still reports 44 errors. No regression.
+
+## Phase 3 P2 P3 P5
+
+- FWFT response pop is now RVALID && RREADY; RVALID is FIFO not-empty.
+- AR address is enqueued at acceptance using existing FIFO storage.
+- Core request pop and execution now share arbitration/capacity gating.
+  Existing registered response stage is included in the capacity reservation.
+- Behavior change: read responses survive stalls, accepted AR data cannot be
+  replaced by later bus values, and concurrent writes cannot discard reads.
+- No FIFO, holding register, port or FSM state added.

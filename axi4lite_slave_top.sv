@@ -81,6 +81,7 @@ module axi4lite_slave_top #(
     logic [AXI_ADDR_WIDTH-1:0] rd_req_addr_in;
     logic [AXI_ADDR_WIDTH-1:0] rd_req_addr_out;
     logic                     rd_req_empty;
+    wire                      rd_req_pop;
 
     async_fifo #(
         .DATA_WIDTH(AXI_ADDR_WIDTH),
@@ -93,7 +94,7 @@ module axi4lite_slave_top #(
         .wr_full(rd_req_full),
         .rd_clk(CORE_CLK),
         .rd_rst_n(CORE_RESETn),
-        .rd_en(1'b1), // core side reads when not empty
+        .rd_en(rd_req_pop), // reserve response capacity
         .rd_data(rd_req_addr_out),
         .rd_empty(rd_req_empty)
     );
@@ -108,6 +109,7 @@ module axi4lite_slave_top #(
     logic                     rd_resp_en;
     logic                     rd_resp_full;
     logic                     rd_resp_empty;
+    assign rd_req_pop = wr_empty && !rd_resp_full && !rd_resp_en;
 
     async_fifo #(
         .DATA_WIDTH(READ_FIFO_WIDTH),
@@ -120,7 +122,7 @@ module axi4lite_slave_top #(
         .wr_full(rd_resp_full),
         .rd_clk(ACLK),
         .rd_rst_n(ARESETn),
-        .rd_en(1'b1), // ACLK side reads when not empty
+        .rd_en(RVALID && RREADY), // retain the FWFT head throughout a stall
         .rd_data(rd_resp_word_out),
         .rd_empty(rd_resp_empty)
     );
@@ -204,15 +206,14 @@ module axi4lite_slave_top #(
     typedef enum logic [1:0] {RD_IDLE, RD_SEND_ADDR, RD_WAIT_DATA} read_state_t;
     read_state_t read_state, read_state_next;
 
-    assign rd_req_en = (read_state == RD_SEND_ADDR) && !rd_req_full;
+    assign rd_req_en = (read_state == RD_IDLE) && ARVALID && !rd_req_full;
     assign rd_req_addr_in = ARADDR;
 
     assign ARREADY = (read_state == RD_IDLE) && !rd_req_full && ARVALID;
 
     // Read data path
     assign {RDATA, RRESP} = rd_resp_word_out;
-    assign RVALID = (read_state == RD_WAIT_DATA) && !rd_resp_empty;
-    // RREADY handled by FIFO read enable (always 1 when not empty)
+    assign RVALID = !rd_resp_empty;
 
     always_ff @(posedge ACLK or negedge ARESETn) begin
         if (!ARESETn) begin
@@ -231,7 +232,7 @@ module axi4lite_slave_top #(
                 end
             end
             RD_SEND_ADDR: begin
-                // After sending address, wait for data
+                // Address was enqueued at the RD_IDLE handshake.
                 read_state_next = RD_WAIT_DATA;
             end
             RD_WAIT_DATA: begin
@@ -294,7 +295,7 @@ module axi4lite_slave_top #(
                 rd_resp_en <= 1'b0; // not processing a read request
             end
             // Handle read request
-            else if (!rd_req_empty) begin
+            else if (!rd_req_empty && rd_req_pop) begin
                 logic [$clog2(NUM_REGS)-1:0] reg_idx;
                 reg_idx = rd_addr_core[$clog2(NUM_REGS)+1:2];
                 rd_data_core <= reg_file[reg_idx];

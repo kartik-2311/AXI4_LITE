@@ -115,3 +115,10 @@ MODE=1 without HOLD passes 4/4 ratios, including the previously lost
 completion at 1:3. The unchanged legacy top still times out at Test 4 and
 the standalone FIFO still reports exactly 44 mismatches. No baseline result
 became worse. Read failures remain scheduled for Phase 3.
+
+## Phase 3 gate
+
+Full mixed-traffic MODE=0 and isolated read MODE=2 pass all four ratios.
+Long R stalls, changed AR payloads, concurrent write/read arbitration and
+post-reset accounting pass. The unchanged legacy results remain identical:
+top timeout at Test 4; FIFO 44 mismatches. No new storage was needed.
