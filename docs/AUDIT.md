@@ -122,3 +122,24 @@ Full mixed-traffic MODE=0 and isolated read MODE=2 pass all four ratios.
 Long R stalls, changed AR payloads, concurrent write/read arbitration and
 post-reset accounting pass. The unchanged legacy results remain identical:
 top timeout at Test 4; FIFO 44 mismatches. No new storage was needed.
+
+## Phase 4 storage necessity and map decision
+
+The existing B response is a constant, and no ACLK storage retains the accepted
+address after its FIFO request is consumed. Supporting selectable per-access
+errors while maintaining P2 therefore needs two bits of B response storage.
+Capture the shared decode result at acceptance in ACLK, avoiding any new CDC
+bus. This is the only added response holding register and exists for P2/P6.
+The documented register window is 16 four-byte slots (0x00 through 0x3f).
+Treat the unbounded high-address aliases as unsupported outside-window access
+under the explicit Phase 4 policy. Default response code remains OKAY; outside
+accesses no longer touch the aliased register. All 16 slots remain read/write;
+there are no invented read-only registers or reserved holes.
+
+## Phase 4 gate
+
+Policy regression covers default OKAY, selectable SLVERR/DECERR, strict and
+permissive alignment, out-of-window and misaligned reads/writes, including
+error responses held under long stalls. Shared decode suppresses side effects.
+Joint acceptance passes simultaneous, AW-first, W-first and fixed-seed random
+skews, including 20 cycles. No independent AW/W buffers are needed.

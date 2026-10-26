@@ -6,7 +6,7 @@ New-Item -ItemType Directory -Force $run | Out-Null
 $failures=0
 foreach ($clock in @(@(15,15),@(15,5),@(5,15),@(5,7))) {
     $argsList=@('-g2012','-Wall','-Wno-timescale','-s','tb_axi4lite_hardening',"-Ptb_axi4lite_hardening.AH=$($clock[0])","-Ptb_axi4lite_hardening.CH=$($clock[1])")
-    $policies=if($Policy){ @('0,0','1,2','0,2') } else { @('0,0') }
+    $policies=if($Policy){ @('0,0','0,2','1,2','0,3','1,3') } else { @('0,0') }
     foreach($policyText in $policies) {
         $policyCase=$policyText.Split(',')
         $exe=Join-Path $run "test-$($clock[0])-$($clock[1])-$($policyCase[0])-$($policyCase[1]).vvp"

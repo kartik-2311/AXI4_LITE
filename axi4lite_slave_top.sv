@@ -11,6 +11,8 @@ module axi4lite_slave_top #(
     parameter AXI_STRB_WIDTH = AXI_DATA_WIDTH/8,
     // FIFO depth (must be power of two)
     parameter FIFO_DEPTH = 8,
+    parameter [1:0] OOR_RESP = 2'b00,
+    parameter STRICT_ALIGN = 0,
     // Derive FIFO address width from depth
     localparam FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH)
 )(
@@ -141,8 +143,10 @@ module axi4lite_slave_top #(
     assign AWREADY = (write_state == IDLE) && !wr_full && WVALID;
     assign WREADY  = (write_state == IDLE) && !wr_full && AWVALID;
 
-    // BRESP is always OKAY for now
-    assign BRESP = 2'b00;
+    // P2/P6: retain the local decode result until the B handshake.
+    logic [1:0] b_resp;
+    wire [6:0] aw_decode = decode_address(AWADDR);
+    assign BRESP = b_resp;
     assign BVALID = (write_state == SEND_BRESP);
     // We need a write-complete signal from core side (synchronized to ACLK)
 
@@ -167,9 +171,11 @@ module axi4lite_slave_top #(
         if (!ARESETn) begin
             write_state <= IDLE;
             write_done_seen <= 1'b0;
+            b_resp <= 2'b00;
         end else begin
             write_state <= write_state_next;
             if (BVALID && BREADY) write_done_seen <= write_done_aclk;
+            if (wr_en) b_resp <= aw_decode[1:0];
         end
     end
 
@@ -252,16 +258,31 @@ module axi4lite_slave_top #(
     logic [AXI_DATA_WIDTH-1:0] reg_file [NUM_REGS];
     integer i;
 
+    // Shared local decode: {serviceable, register index, response}.
+    // The existing map has sixteen four-byte slots, with no holes or RO slots.
+    function automatic [6:0] decode_address(input [AXI_ADDR_WIDTH-1:0] address);
+        begin
+            if ((address >> 6) != 0)
+                decode_address = {1'b0, address[5:2], OOR_RESP};
+            else if (STRICT_ALIGN && address[1:0] != 0)
+                decode_address = {1'b0, address[5:2], 2'b10};
+            else
+                decode_address = {1'b1, address[5:2], 2'b00};
+        end
+    endfunction
+
     // Write data path from write FIFO
     logic [AXI_ADDR_WIDTH-1:0] wr_addr_core;
     logic [AXI_DATA_WIDTH-1:0] wr_data_core;
     logic [AXI_STRB_WIDTH-1:0] wr_strb_core;
 
     assign {wr_addr_core, wr_data_core, wr_strb_core} = wr_data_out;
+    wire [6:0] wr_decode = decode_address(wr_addr_core);
 
     // Read request path
     logic [AXI_ADDR_WIDTH-1:0] rd_addr_core;
     assign rd_addr_core = rd_req_addr_out;
+    wire [6:0] rd_decode = decode_address(rd_addr_core);
 
     // Read response path
     logic [AXI_DATA_WIDTH-1:0] rd_data_core;
@@ -279,27 +300,19 @@ module axi4lite_slave_top #(
         end else begin
             // Handle write (when FIFO not empty)
             if (!wr_empty) begin
-                // Decode register index (assuming word-aligned, lower 2 bits zero for 32-bit)
-                // We'll use the lowest bits that can index NUM_REGS
-                localparam REG_IDX_WIDTH = $clog2(NUM_REGS);
-                logic [REG_IDX_WIDTH-1:0] reg_idx;
                 write_done_core <= ~write_done_core;
-                // Use bits [2+:REG_IDX_WIDTH] of address (assuming byte address, word-aligned)
-                reg_idx = wr_addr_core[2 +: REG_IDX_WIDTH];
                 // Write with strobe
                 for (i = 0; i < AXI_STRB_WIDTH; i++) begin
-                    if (wr_strb_core[i]) begin
-                        reg_file[reg_idx][i*8 +: 8] <= wr_data_core[i*8 +: 8];
+                    if (wr_decode[6] && wr_strb_core[i]) begin
+                        reg_file[wr_decode[5:2]][i*8 +: 8] <= wr_data_core[i*8 +: 8];
                     end
                 end
                 rd_resp_en <= 1'b0; // not processing a read request
             end
             // Handle read request
             else if (!rd_req_empty && rd_req_pop) begin
-                logic [$clog2(NUM_REGS)-1:0] reg_idx;
-                reg_idx = rd_addr_core[$clog2(NUM_REGS)+1:2];
-                rd_data_core <= reg_file[reg_idx];
-                rd_resp_core <= 2'b00; // OKAY
+                rd_data_core <= rd_decode[6] ? reg_file[rd_decode[5:2]] : '0;
+                rd_resp_core <= rd_decode[1:0];
                 rd_resp_en <= 1'b1; // push read response to FIFO
             end
             else begin

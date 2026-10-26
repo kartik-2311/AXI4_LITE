@@ -35,7 +35,7 @@ module tb_axi4lite_hardening;
     endfunction
     function [1:0] response(input [31:0] addr);
         begin
-            response = (ALIGN && addr[1:0]!=0) ? 2 : (addr>=64 ? OOR : 0);
+            response = addr>=64 ? OOR : ((ALIGN && addr[1:0]!=0) ? 2 : 0);
         end
     endfunction
     task fail(input string message);
@@ -161,7 +161,7 @@ module tb_axi4lite_hardening;
     initial begin
         if ($value$plusargs("MODE=%d",mode)) begin end
         if ($value$plusargs("HOLD=%d",hold_inputs)) begin end
-        $display("START seed=%h ACLK:CORE_CLK=%0d:%0d mode=%0d",seed,CH,AH,mode);
+        $display("START seed=%h ACLK:CORE_CLK=%0d:%0d mode=%0d STRICT_ALIGN=%0d OOR_RESP=%0d",seed,CH,AH,mode,ALIGN,OOR);
         reset_joint();
         if(mode!=2) begin
             // Long B stall plus sustained attempted writes; only bounded work may enter.
@@ -180,7 +180,10 @@ module tb_axi4lite_hardening;
         end
         if(mode!=1) begin
             fork
-                begin for(integer j=0;j<24;j=j+1) begin read_request((j%16)*4); wait(rp==j+1); end end
+                begin
+                    for(integer j=0;j<24;j=j+1) read_request((j%16)*4);
+                    wait(rp==24);
+                end
                 begin wait(RVALID); repeat(80) @(negedge ACLK); RREADY=1; end
             join
             if(mode==0) begin
@@ -193,6 +196,13 @@ module tb_axi4lite_hardening;
         end
 `ifdef POLICY
         if(mode==0) begin
+            @(negedge ACLK); BREADY=0; RREADY=0;
+            fork
+                begin write_one(65,32'hffffffff,15,0); end
+                begin wait(BVALID); repeat(80) @(negedge ACLK); BREADY=1; end
+                begin read_one(65); end
+                begin wait(RVALID); repeat(80) @(negedge ACLK); RREADY=1; end
+            join
             write_one(64,32'hffffffff,15,0); read_one(64);
             write_one(32'h80000000,32'hffffffff,15,0); read_one(32'h80000000);
             write_one(1,32'hffffffff,15,0); read_one(1); read_one(0);

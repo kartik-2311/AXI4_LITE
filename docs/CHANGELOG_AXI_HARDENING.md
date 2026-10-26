@@ -33,3 +33,18 @@ fixed seed, four clock ratios and bounded legacy runner. No RTL edits.
 - Behavior change: read responses survive stalls, accepted AR data cannot be
   replaced by later bus values, and concurrent writes cannot discard reads.
 - No FIFO, holding register, port or FSM state added.
+
+## Phase 4 P4 P6
+
+- Retained joint AW/W acceptance, proven by skewed-arrival tests. No AW/W
+  holding storage added. Acceptance-cycle capture was fixed in Phase 2.
+- Shared local decode used for write/read execution and ACLK response capture.
+- Added OOR_RESP default 2'b00, preserving the original response code; SLVERR
+  and DECERR are selectable. Added STRICT_ALIGN default 0, preserving low-bit
+  ignoring. STRICT_ALIGN=1 returns SLVERR for misalignment inside the window.
+- Behavior change required by Phase 4: high addresses no longer alias low
+  registers; unsupported accesses have no side effect and read as zero.
+  Outside-window response selection precedes alignment. No RO slots invented.
+- Two new BRESP holding bits are necessary for dynamic per-access responses
+  under P2/P6; no existing response storage existed. Decode occurs locally,
+  so no new multibit CDC is introduced. WSTRB semantics are preserved.
