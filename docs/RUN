@@ -1,0 +1,96 @@
+AXI4-LITE SLAVE: DESIGN RUN AND VERIFICATION
+============================================
+
+Purpose
+-------
+This guide collects the design and verification instructions repeated in the
+project's Markdown completion and summary documents. The design is RTL; the
+testbench is the simulation entry point used to exercise it.
+
+Project files
+-------------
+Run commands from the project root (the directory containing these paths):
+
+  axi4lite_slave_top.sv
+  tb_axi4lite_slave_top.sv
+  async_fifo/rtl/async_fifo.sv
+
+Required tool
+-------------
+Install Icarus Verilog and ensure both `iverilog` and `vvp` are available on
+your command PATH. Check in PowerShell:
+
+  Get-Command iverilog, vvp
+
+Compile the design and testbench
+--------------------------------
+From the project root, compile the FIFO, DUT, and testbench together:
+
+  iverilog -g2012 -Wall -Wno-timescale -o axi4lite_tb.vvp async_fifo/rtl/async_fifo.sv axi4lite_slave_top.sv tb_axi4lite_slave_top.sv
+
+Run the simulation:
+
+  vvp axi4lite_tb.vvp
+
+The compile command is the verification command recorded in the project
+README, summaries, completion notes, and review notes. Those documents repeat
+the same invocation; it is listed once here.
+
+Expected testbench activity
+---------------------------
+The testbench creates two clocks (ACLK at 100 MHz and CORE_CLK at 75 MHz),
+releases reset, and exercises:
+
+  1. Write 0xA5A5A5A5 to register 0 and read back.
+  2. Write 0x12345678 to register 4 and read back.
+  3. Write 0xF0F0F0F0 to register 15 using WSTRB=4'h6 and read back
+     (expected value from reset is 0x00F0F000).
+  4. Back-to-back writes to registers 1 and 2.
+  5. Write 0x11223344 to register 8 and read it immediately afterward.
+
+The testbench prints transaction/response messages and writes
+`tb_axi4lite_slave_top.vcd` in the current working directory. Open the VCD in a
+waveform viewer to inspect clock-domain activity and AXI handshakes.
+
+Review the output for every `ERROR` line. The current testbench reports data
+mismatches with `$display` rather than `$fatal`; therefore, a zero simulator
+exit code alone does not prove that all comparisons passed.
+
+Assertions
+----------
+The RTL contains SystemVerilog Assertions for AXI VALID/payload stability
+during stalls and FIFO push safety. They are enclosed in
+`ifndef __ICARUS__, so Icarus Verilog does not execute them. Use a simulator
+with concurrent SVA support to run those checks.
+
+Run the asynchronous FIFO testbench separately (optional)
+----------------------------------------------------------
+The repository also contains `async_fifo/tb/async_fifo_tb.sv`. To compile and
+run that standalone testbench from the project root:
+
+  iverilog -g2012 -Wall -Wno-timescale -s async_fifo_tb -o async_fifo_tb.vvp async_fifo/rtl/async_fifo.sv async_fifo/tb/async_fifo_tb.sv
+  vvp async_fifo_tb.vvp
+
+This optional command is provided for the FIFO component; the project Markdown
+completion documents specifically list the AXI4-Lite testbench command above.
+
+Known verification limitations
+------------------------------
+The completion notes report that the listed AXI4-Lite tests passed. However,
+the current RTL/testbench has limitations that those tests do not cover:
+
+  - AW and W are expected together; independent channel arrival is not
+    verified.
+  - The write payload is pushed after the READY/VALID acceptance point without
+    first latching the payload.
+  - The write completion indicator reflects a non-empty FIFO, not a distinct
+    acknowledgement after the register update.
+  - Read-response FIFO consumption is not gated by RVALID && RREADY, so
+    backpressure behavior is not verified.
+  - The Icarus run attempted during documentation preparation compiled
+    successfully, but the simulation did not finish within 10 seconds. The
+    historical pass claims were therefore not independently confirmed.
+
+Treat the listed simulation as a starting-point verification flow, not
+production signoff. Resolve the limitations and extend the tests before
+integrating the design into a system.

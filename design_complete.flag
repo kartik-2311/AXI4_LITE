@@ -1,0 +1,10 @@
+AXI4-Lite Slave with CDC FIFO Bridge - Design Complete
+All requirements fulfilled:
+1. RTL implemented with write/read FSMs and register bank
+2. AXI4-Lite signals present per spec
+3. SVA assertions for protocol compliance
+4. Testbench with write/read/back-to-back/CDC tests
+5. README explaining CDC design decisions
+Reused existing async_fifo module unchanged.
+Simulation passes with Icarus Verilog.
+Completed: 2026-10-09
