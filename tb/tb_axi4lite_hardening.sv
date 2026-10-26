@@ -16,9 +16,10 @@ module tb_axi4lite_hardening;
         .STRICT_ALIGN(ALIGN), .OOR_RESP(OOR),
 `endif
         .FIFO_DEPTH(8)) dut (.*);
+    axi4lite_reset_checker reset_contract(.*);
 
     integer seed=32'h41584934, rng=32'h41584934;
-    integer mode=0, hold_inputs=0, n, wp=0, we=0, bp=0, ap=0, re=0, rp=0;
+    integer mode=0, hold_inputs=0, bad_reset=0, n, wp=0, we=0, bp=0, ap=0, re=0, rp=0;
     reg [31:0] ra[0:1023];
     reg [31:0] wa[0:1023], wd[0:1023], expected_r[0:1023];
     reg [3:0] ws[0:1023];
@@ -27,10 +28,10 @@ module tb_axi4lite_hardening;
     integer i;
     initial for(i=0;i<16;i=i+1) model[i]=0;
 
-    function integer random20;
+    function integer random_skew;
         begin
             rng = rng * 1664525 + 1013904223;
-            random20 = (rng & 32'h7fffffff) % 21;
+            random_skew = ((rng & 32'h7fffffff) % 41)-20;
         end
     endfunction
     function [1:0] response(input [31:0] addr);
@@ -63,6 +64,7 @@ module tb_axi4lite_hardening;
             if (AWVALID && AWREADY) begin wa[aw_count]=AWADDR; aw_count=aw_count+1; end
             if (WVALID && WREADY) begin wd[w_count]=WDATA; ws[w_count]=WSTRB; w_count=w_count+1; end
             wp=(aw_count<w_count ? aw_count : w_count);
+            if(wp-bp>1 || ap-rp>1) fail("P3 reserved capacity exceeded");
             if (BVALID) begin
                 if (bp>=we || bp>=wp) fail("P1 B before core execution or duplicate");
                 if (BRESP!==response(wa[bp])) fail("P6 BRESP");
@@ -161,14 +163,25 @@ module tb_axi4lite_hardening;
     initial begin
         if ($value$plusargs("MODE=%d",mode)) begin end
         if ($value$plusargs("HOLD=%d",hold_inputs)) begin end
+        if ($value$plusargs("BAD_RESET=%d",bad_reset)) begin end
         $display("START seed=%h ACLK:CORE_CLK=%0d:%0d mode=%0d STRICT_ALIGN=%0d OOR_RESP=%0d",seed,CH,AH,mode,ALIGN,OOR);
         reset_joint();
+        if(bad_reset==1) begin
+            @(negedge ACLK); ARESETn=0;
+            #1; fail("reset contract checker did not reject unilateral reset");
+        end
+        if(bad_reset==2) begin
+            @(negedge ACLK); ARESETn=0; CORE_RESETn=0;
+            repeat(4) @(negedge ACLK);
+            #1; ARESETn=1;
+            #1; fail("reset contract checker did not reject asynchronous release");
+        end
         if(mode!=2) begin
             // Long B stall plus sustained attempted writes; only bounded work may enter.
             fork
                 begin
                     for(integer j=0;j<24;j=j+1)
-                        write_request((j%16)*4,32'h12340000+j,(j%16),j==0 ? 0 : random20()-10);
+                        write_request((j%16)*4,32'h12340000+j,(j%16),j==0 ? 0 : random_skew());
                 end
                 begin
                     wait(BVALID); repeat(80) @(negedge ACLK); BREADY=1;
@@ -189,7 +202,7 @@ module tb_axi4lite_hardening;
             if(mode==0) begin
                 // Disjoint register sets avoid imposing cross-channel execution order.
                 fork
-                    begin for(integer j=0;j<20;j=j+1) write_one((j%8)*4,j,15,random20()-10); end
+                    begin for(integer j=0;j<20;j=j+1) write_one((j%8)*4,j,15,random_skew()); end
                     begin for(integer j=0;j<20;j=j+1) read_one((8+j%8)*4); end
                 join
             end
@@ -215,6 +228,12 @@ module tb_axi4lite_hardening;
             begin if(mode!=1) read_request(4); end
         join
         repeat(2) @(negedge ACLK); reset_joint();
+        // Also reset while both response channels are visibly stalled.
+        fork
+            begin if(mode!=2) begin write_request(8,32'h10203040,15,0); wait(BVALID); end end
+            begin if(mode!=1) begin read_request(12); wait(RVALID); end end
+        join
+        repeat(20) @(negedge ACLK); reset_joint();
         BREADY=1; RREADY=1;
         if(mode!=2) write_one(0,32'h87654321,15,0);
         if(mode!=1) read_one(0);

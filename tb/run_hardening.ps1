@@ -1,4 +1,4 @@
-param([int]$Mode=0, [switch]$Policy, [switch]$HoldInputs)
+param([int]$Mode=0, [switch]$Policy, [switch]$HoldInputs, [switch]$CheckResetContract)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $run=Join-Path $env:TEMP 'axi-hardening-tests'
@@ -12,11 +12,18 @@ foreach ($clock in @(@(15,15),@(15,5),@(5,15),@(5,7))) {
         $exe=Join-Path $run "test-$($clock[0])-$($clock[1])-$($policyCase[0])-$($policyCase[1]).vvp"
         $compile=$argsList + @("-Ptb_axi4lite_hardening.ALIGN=$($policyCase[0])","-Ptb_axi4lite_hardening.OOR=$($policyCase[1])")
         if($Policy){ $compile+= '-DPOLICY' }
-        & iverilog @compile -o $exe "$repo/async_fifo/rtl/async_fifo.sv" "$repo/axi4lite_slave_top.sv" "$PSScriptRoot/tb_axi4lite_hardening.sv"
+        & iverilog @compile -o $exe "$repo/async_fifo/rtl/async_fifo.sv" "$repo/axi4lite_slave_top.sv" "$PSScriptRoot/axi4lite_reset_checker.sv" "$PSScriptRoot/tb_axi4lite_hardening.sv"
         if($LASTEXITCODE){ throw 'compile failed' }
         & vvp -i $exe "+MODE=$Mode" "+HOLD=$([int][bool]$HoldInputs)"
         if($LASTEXITCODE){ $failures++ }
     }
 }
 if($failures){ throw "$failures hardening cases failed" }
+if($CheckResetContract) {
+    foreach($bad in @(1,2)) {
+        $output=& vvp -i $exe "+BAD_RESET=$bad" 2>&1
+        if($LASTEXITCODE -eq 0 -or !($output -match 'RESET_CONTRACT')) { throw "reset negative control $bad failed" }
+        Write-Output "PASS reset negative control $bad rejected by RESET_CONTRACT"
+    }
+}
 

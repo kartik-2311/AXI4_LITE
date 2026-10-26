@@ -143,3 +143,82 @@ permissive alignment, out-of-window and misaligned reads/writes, including
 error responses held under long stalls. Shared decode suppresses side effects.
 Joint acceptance passes simultaneous, AW-first, W-first and fixed-seed random
 skews, including 20 cycles. No independent AW/W buffers are needed.
+
+## Phase 5 final results and reproducible commands
+
+Run from the project root with PowerShell and Icarus/vvp on PATH:
+
+```
+pwsh -NoProfile -File tb/run_hardening.ps1 -Policy -CheckResetContract
+pwsh -NoProfile -File tb/run_hardening.ps1 -Mode 1
+pwsh -NoProfile -File tb/run_hardening.ps1 -Mode 2
+pwsh -NoProfile -File tb/run_legacy.ps1
+iverilog -g2012 -Wall -Wno-timescale -tnull -s axi4lite_slave_top async_fifo/rtl/async_fifo.sv axi4lite_slave_top.sv
+```
+
+Final results: 20 mixed/policy cases PASS (four ratios times five policies),
+four write cases PASS, four read cases PASS. Both reset negative controls
+PASS by rejecting the deliberate contract violation. Seed 0x41584934 is printed
+on start and on every failure. Stalls last 80 ACLK cycles (>2*FIFO_DEPTH);
+random skew spans -20..20, plus directed AW/W orders and full/partial/zero
+strobes. Reset occurs in flight and with stalled responses, followed by fresh
+transaction checks. All core register values are checked against an independent
+byte-lane model after core execution, including suppressed error side effects.
+
+Baseline versus final: canonical elaboration passes in both; legacy top times
+out at Test 4 in both; standalone FIFO reports 44 errors in both. The runner
+explicitly rejects worse legacy outcomes. No existing passing result regressed.
+The old test_icarus_assert.sv and test_sva.sv are unchanged capability probes;
+they compile but vvp rejects undefined $past (exit 1) and $past/$stable (exit 2),
+respectively. They are not functional AXI regression passes.
+
+Canonical Icarus -Wall elaboration exits 0 with no warnings. Existing concurrent
+SVA block was compared against e8ac44d and is unchanged; it cannot run in Icarus.
+No dedicated lint/CDC tools, constraints or formal/SymbiYosys configuration
+exist in this project/toolchain. Per Phase 5, creating a formal setup is skipped.
+
+### Invariant status after hardening
+
+PASS below means source-level argument plus passing procedural simulation under
+ASSUMPTIONS.md, not unbounded formal verification.
+
+- **P1 PASS**: axi4lite_slave_top.sv:139 captures at acceptance; :303 toggles
+  only on core execution; :196 waits for synchronized toggle mismatch. Checker
+  compares accepted payload, actual register effects, execution and B counts.
+- **P2 PASS**: :147-178 retains local BRESP; SEND_BRESP persists until READY.
+  :126 pops read head only at handshake; :222 uses not-empty for RVALID.
+  tb/tb_axi4lite_hardening.sv:60-63 checks both stalls, including errors.
+- **P3 PASS**: one outstanding write reserves the toggle/B-state slot; no next
+  request before B acknowledgment. One outstanding read plus :114 capacity
+  reservation (including the registered pending enqueue) prevents overflow.
+  Checker covers response uniqueness, counts, full writes and held responses.
+- **P4 PASS**: :143-144 retains joint acceptance. Master VALIDs are held until
+  handshake, in either order, while :139 captures both at that edge. No buffer
+  or liveness dependency on a master waiting for READY is introduced.
+- **P5 PASS**: :215 captures AR at handshake, :99/:313 share actual core
+  selection with FIFO consumption; existing FIFO preserves ordering and stall
+  stability. Scoreboard checks accepted AR versus core request and returned data.
+- **P6 PASS**: :263 is the shared decode for core reads/writes and local B code.
+  Default and selectable response policies and side-effect suppression pass.
+- **P7 UNPROVEN for physical CDC/reset signoff**: environment contract and
+  negative controls PASS in simulation. Structural inspection finds only
+  existing Gray FIFO crossings and the existing one-bit 2FF completion crossing.
+  Metastability, implementation timing and reset recovery/removal are not proven.
+
+### Capacity and retention argument for unbounded stalls
+
+After a write handshake the FSM cannot accept another until its B handshake.
+Exactly one request FIFO pop executes that request and changes the completion
+toggle once. Its value persists until a subsequent execution, which requires a
+later accepted request, so it cannot be missed regardless of clock ratio.
+WAIT_CORE can enter SEND_BRESP once; that state cannot leave without handshake.
+BRESP changes only on a new acceptance, impossible while the prior B is stalled.
+
+The read FSM similarly admits one request until the response handshake. Core
+request consumption and response creation are paired. The one registered
+response is enqueued on the next core edge; no second execution is admitted
+while it is pending. The FIFO output is retained without a pop, and only an R
+handshake pops it. Thus a stall does not change ownership or allow another
+response to overwrite the current one. These arguments assume the audited FIFO
+contract, correctly implemented synchronizers, joint reset and progressing clocks.
+Finite tests exercise the argument but do not constitute a machine-checked proof.

@@ -63,3 +63,22 @@ no storage for a dynamic error. They capture the shared decode at acceptance
 and remain unchanged until the next request, after the prior B handshake.
 The core uses the same decode to suppress unsupported side effects, and only
 the existing single-bit completion toggle crosses back to ACLK.
+
+## Reset contract enforcement and verification limits
+
+tb/axi4lite_reset_checker.sv is a reusable verification-only checker instantiated
+by the new hardening testbench. Assertion of either reset requires both low in
+the same simulation timestep. Deassertion occurs on each domain's falling edge,
+providing half a cycle of recovery before the next sampling edge. Releases need
+not occur at the same instant. Negative-control tests deliberately violate
+joint assertion and synchronous release and require the checker to reject both.
+The original testbench is preserved, including its historical reset timing;
+it is not a reset-contract signoff test.
+
+Digital simulation models ideal synchronizers. Physical implementation must
+provide synchronizer placement/attributes, Gray-bus skew constraints, reset
+distribution/recovery analysis and RAM inference validation for the target.
+No dedicated lint/CDC tool, timing constraints or existing formal setup was
+found; none was installed. Icarus -Wall elaboration and procedural monitors
+are the available checks. A passing finite simulation is not an unbounded
+formal proof of P1-P7 or a metastability/MTBF signoff.

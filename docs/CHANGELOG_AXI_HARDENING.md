@@ -48,3 +48,22 @@ fixed seed, four clock ratios and bounded legacy runner. No RTL edits.
 - Two new BRESP holding bits are necessary for dynamic per-access responses
   under P2/P6; no existing response storage existed. Decode occurs locally,
   so no new multibit CDC is introduced. WSTRB semantics are preserved.
+
+## Phase 5 P7 and final checks
+
+- No RTL changes. Added a reusable verification-only reset-contract checker
+  and negative controls for unilateral assertion and asynchronous release.
+- Extended fixed-seed random arrival skew to the full -20..20 cycle range;
+  added reset with visibly stalled B/R responses and capacity assertions.
+- Added automatic baseline comparison to the unchanged legacy regression.
+  No test/assertion was deleted or weakened. Marked README as the historical
+  description and linked the current contract to avoid stale integration advice.
+- Final simulation: 20/20 mixed/policy cases, 4/4 isolated write cases,
+  4/4 isolated read cases, and 2/2 reset negative controls pass.
+- Icarus -Wall canonical elaboration passes without warnings. Legacy results
+  match baseline: top hangs in Test 4; FIFO reports 44 mismatches. The two
+  unchanged SVA capability probes still cannot run ($past/$stable unsupported).
+- async_fifo, existing testbenches, original concurrent SVA, existing ports,
+  parameter names/defaults, alternate top snapshots and completion flags are
+  unchanged. No new FIFO, skid buffer, payload holding register or FSM state.
+- Formal/physical CDC signoff is UNPROVEN; no existing setup/tool was available.

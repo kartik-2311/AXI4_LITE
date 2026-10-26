@@ -1,5 +1,11 @@
 # AXI4-Lite Slave with Clock-Domain-Crossing FIFOs
 
+**Hardening update:** The descriptions and caveats below record the original
+implementation. The canonical RTL has since been hardened on `axi-hardening`;
+see [AUDIT.md](AUDIT.md), [ASSUMPTIONS.md](ASSUMPTIONS.md), and
+[CHANGELOG_AXI_HARDENING.md](CHANGELOG_AXI_HARDENING.md) for current behavior,
+known baseline test failures, and verification commands/results.
+
 This project contains a memory-mapped AXI4-Lite slave whose bus interface runs
 on `ACLK` while its 16-word register bank runs on `CORE_CLK`. Three asynchronous
 FIFOs transfer complete transactions or responses between the clock domains.
