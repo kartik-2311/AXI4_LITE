@@ -1,0 +1,5 @@
+source $::env(_TCL_ENV_IN)
+source [file join $::env(PDK_ROOT) sky130A libs.tech magic sky130A.magicrc]
+if {$::env(STEP_ID) eq "Magic.SpiceExtraction" && $::env(MAGIC_EXT_USE_GDS)} {
+    path search .
+}

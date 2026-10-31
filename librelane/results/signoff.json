@@ -1,0 +1,231 @@
+{
+  "run": "axi-04",
+  "sta_source_run": "axi-02",
+  "state": "09-misc-reportmanufacturability/state_out.json",
+  "zero_error_metrics": {
+    "magic__drc_error__count": 0,
+    "klayout__drc_error__count": 0,
+    "route__drc_errors": 0,
+    "design__lvs_error__count": 0,
+    "antenna__violating__nets": 0,
+    "antenna__violating__pins": 0,
+    "timing__setup_vio__count": 0,
+    "timing__hold_vio__count": 0,
+    "design__xor_difference__count": 0
+  },
+  "remaining_electrical_warnings": {
+    "design__max_slew_violation__count": 372,
+    "design__max_cap_violation__count": 12
+  },
+  "timing": [
+    {
+      "corner": "max_ff_n40C_1v95",
+      "clock": "ACLK",
+      "setup_ns": 3.276156,
+      "hold_ns": 0.11176
+    },
+    {
+      "corner": "max_ff_n40C_1v95",
+      "clock": "CORE_CLK",
+      "setup_ns": 16.290266,
+      "hold_ns": 0.108979
+    },
+    {
+      "corner": "max_ff_n40C_1v95",
+      "clock": "CDC max delay",
+      "setup_ns": 6.225202,
+      "hold_ns": null
+    },
+    {
+      "corner": "max_ss_100C_1v60",
+      "clock": "ACLK",
+      "setup_ns": 0.510509,
+      "hold_ns": 0.844762
+    },
+    {
+      "corner": "max_ss_100C_1v60",
+      "clock": "CORE_CLK",
+      "setup_ns": 8.449824,
+      "hold_ns": 0.895137
+    },
+    {
+      "corner": "max_ss_100C_1v60",
+      "clock": "CDC max delay",
+      "setup_ns": 0.328192,
+      "hold_ns": null
+    },
+    {
+      "corner": "max_tt_025C_1v80",
+      "clock": "ACLK",
+      "setup_ns": 3.017958,
+      "hold_ns": 0.315733
+    },
+    {
+      "corner": "max_tt_025C_1v80",
+      "clock": "CORE_CLK",
+      "setup_ns": 14.240071,
+      "hold_ns": 0.324229
+    },
+    {
+      "corner": "max_tt_025C_1v80",
+      "clock": "CDC max delay",
+      "setup_ns": 5.399052,
+      "hold_ns": null
+    },
+    {
+      "corner": "min_ff_n40C_1v95",
+      "clock": "ACLK",
+      "setup_ns": 3.283036,
+      "hold_ns": 0.108658
+    },
+    {
+      "corner": "min_ff_n40C_1v95",
+      "clock": "CORE_CLK",
+      "setup_ns": 16.470657,
+      "hold_ns": 0.104602
+    },
+    {
+      "corner": "min_ff_n40C_1v95",
+      "clock": "CDC max delay",
+      "setup_ns": 6.23757,
+      "hold_ns": null
+    },
+    {
+      "corner": "min_ss_100C_1v60",
+      "clock": "ACLK",
+      "setup_ns": 0.784058,
+      "hold_ns": 0.837187
+    },
+    {
+      "corner": "min_ss_100C_1v60",
+      "clock": "CORE_CLK",
+      "setup_ns": 8.908333,
+      "hold_ns": 0.887338
+    },
+    {
+      "corner": "min_ss_100C_1v60",
+      "clock": "CDC max delay",
+      "setup_ns": 0.554162,
+      "hold_ns": null
+    },
+    {
+      "corner": "min_tt_025C_1v80",
+      "clock": "ACLK",
+      "setup_ns": 3.027967,
+      "hold_ns": 0.311401
+    },
+    {
+      "corner": "min_tt_025C_1v80",
+      "clock": "CORE_CLK",
+      "setup_ns": 14.494269,
+      "hold_ns": 0.319835
+    },
+    {
+      "corner": "min_tt_025C_1v80",
+      "clock": "CDC max delay",
+      "setup_ns": 5.52398,
+      "hold_ns": null
+    },
+    {
+      "corner": "nom_ff_n40C_1v95",
+      "clock": "ACLK",
+      "setup_ns": 3.279295,
+      "hold_ns": 0.110302
+    },
+    {
+      "corner": "nom_ff_n40C_1v95",
+      "clock": "CORE_CLK",
+      "setup_ns": 16.384853,
+      "hold_ns": 0.106387
+    },
+    {
+      "corner": "nom_ff_n40C_1v95",
+      "clock": "CDC max delay",
+      "setup_ns": 6.231251,
+      "hold_ns": null
+    },
+    {
+      "corner": "nom_ss_100C_1v60",
+      "clock": "ACLK",
+      "setup_ns": 0.67123,
+      "hold_ns": 0.841502
+    },
+    {
+      "corner": "nom_ss_100C_1v60",
+      "clock": "CORE_CLK",
+      "setup_ns": 8.682328,
+      "hold_ns": 0.890714
+    },
+    {
+      "corner": "nom_ss_100C_1v60",
+      "clock": "CDC max delay",
+      "setup_ns": 0.448609,
+      "hold_ns": null
+    },
+    {
+      "corner": "nom_tt_025C_1v80",
+      "clock": "ACLK",
+      "setup_ns": 3.022453,
+      "hold_ns": 0.31375
+    },
+    {
+      "corner": "nom_tt_025C_1v80",
+      "clock": "CORE_CLK",
+      "setup_ns": 14.373731,
+      "hold_ns": 0.321754
+    },
+    {
+      "corner": "nom_tt_025C_1v80",
+      "clock": "CDC max delay",
+      "setup_ns": 5.468043,
+      "hold_ns": null
+    }
+  ],
+  "area_and_cells": {
+    "design__instance__count": 38768,
+    "design__instance__area": 196808,
+    "design__die__area": 212160,
+    "design__core__area": 196808,
+    "design__instance__count__stdcell": 9467,
+    "design__instance__area__stdcell": 95718.1,
+    "design__instance__count__macros": 0,
+    "design__instance__area__macros": 0,
+    "design__instance__count__padcells": 0,
+    "design__instance__area__padcells": 0,
+    "design__instance__count__cover": 0,
+    "design__instance__area__cover": 0,
+    "design__instance__utilization": 0.486354,
+    "design__instance__utilization__stdcell": 0.486354,
+    "design__instance__count__class:inverter": 21,
+    "design__instance__area__class:inverter": 78.8256,
+    "design__instance__count__class:sequential_cell": 1676,
+    "design__instance__area__class:sequential_cell": 38762.2,
+    "design__instance__count__class:multi_input_combinational_cell": 2807,
+    "design__instance__area__class:multi_input_combinational_cell": 30663.2,
+    "design__instance__count__class:fill_cell": 29301,
+    "design__instance__area__class:fill_cell": 101089,
+    "design__instance__count__class:tap_cell": 2805,
+    "design__instance__area__class:tap_cell": 3509.62,
+    "design__instance__displacement__total": 5360.31,
+    "design__instance__displacement__mean": 0.547,
+    "design__instance__displacement__max": 11.96,
+    "design__instance__count__class:timing_repair_buffer": 1803,
+    "design__instance__area__class:timing_repair_buffer": 18479,
+    "design__instance__count__class:clock_buffer": 309,
+    "design__instance__area__class:clock_buffer": 3911.25,
+    "design__instance__count__class:clock_inverter": 38,
+    "design__instance__area__class:clock_inverter": 294.032,
+    "design__instance__count__setup_buffer": 8,
+    "design__instance__count__hold_buffer": 1602,
+    "design__instance__count__class:antenna_cell": 8,
+    "design__instance__area__class:antenna_cell": 20.0192
+  },
+  "crossing_paths_checked": 5409,
+  "gds_top": "axi4lite_slave_top",
+  "gds_bytes": 12403648,
+  "gds_sha256": "f3dd07cf580c75b692b62529908727f6fc61b8dbd0af5e9fa8d78682b312950f",
+  "rtl_sha256": {
+    "axi4lite_slave_top.sv": "4feba5ea3dad9e53355318ebc080d966adc6c98c20753cfea3da8d08325bb709",
+    "async_fifo/rtl/async_fifo.sv": "b54199597811fc3b12c500a66244013d7e02e8859d9b91218bbd17a8f9d4fa8e"
+  }
+}

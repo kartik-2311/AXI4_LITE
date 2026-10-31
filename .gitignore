@@ -1,0 +1,24 @@
+/results/
+/.Xil/
+/librelane/.venv/
+/librelane/tools/
+/librelane/pdk/
+/librelane/runs/
+/librelane/logs/
+/librelane/__pycache__/
+
+# Machine settings, local analysis and generated verification artifacts
+/.archify/
+/.claude/
+/fpga/
+__pycache__/
+*.pyc
+*.vvp
+*.vcd
+/a.out
+/out.txt
+*.jou
+*.log
+*.dcp
+*.bit
+*.gds

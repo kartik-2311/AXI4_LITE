@@ -1,0 +1,12 @@
+create_clock -name ACLK -period 10 [get_ports ACLK]
+create_clock -name CORE_CLK -period 20 [get_ports CORE_CLK]
+set_clock_groups -name CDC_DOMAINS -asynchronous -allow_paths -group [get_clocks ACLK] -group [get_clocks CORE_CLK]
+set_clock_uncertainty 0.25 [all_clocks]
+set axi_inputs [get_ports {AWADDR* AWVALID WDATA* WSTRB* WVALID BREADY ARADDR* ARVALID RREADY}]
+set_input_delay 3 -clock ACLK $axi_inputs
+set_output_delay 3 -clock ACLK [all_outputs]
+set_false_path -from [get_ports {ARESETn CORE_RESETn}]
+set_max_delay -ignore_clock_latency 10 -from [get_clocks ACLK] -to [get_clocks CORE_CLK]
+set_max_delay -ignore_clock_latency 10 -from [get_clocks CORE_CLK] -to [get_clocks ACLK]
+set_false_path -hold -from [get_clocks ACLK] -to [get_clocks CORE_CLK]
+set_false_path -hold -from [get_clocks CORE_CLK] -to [get_clocks ACLK]
